@@ -89,3 +89,48 @@ FROM ((Sales.SalesOrderHeader JOIN Person.Address ON Sales.SalesOrderHeader.Ship
 JOIN Person.StateProvince ON Person.Address.StateProvinceID = Person.StateProvince.StateProvinceID)
 JOIN Person.CountryRegion ON Person.StateProvince.CountryRegionCode = Person.CountryRegion.CountryRegionCode
 GROUP BY Person.CountryRegion.Name;
+
+
+--zajecia
+select * from Person.Person;
+
+SELECT Person.Person.FirstName, Person.Person.LastName, COUNT(Sales.SalesOrderHeader.SalesOrderID)
+FROM (((((Person.BusinessEntity JOIN Person.Person ON Person.BusinessEntity.BusinessEntityID = Person.Person.BusinessEntityID)
+JOIN Person.BusinessEntityAddress ON Person.BusinessEntity.BusinessEntityID = Person.BusinessEntityAddress.BusinessEntityID)
+JOIN Person.Address ON Person.BusinessEntityAddress.AddressID = Person.Address.AddressID)
+JOIN Person.StateProvince ON Person.Address.StateProvinceID = Person.StateProvince.StateProvinceID)
+JOIN Person.CountryRegion ON Person.StateProvince.CountryRegionCode = Person.CountryRegion.CountryRegionCode)
+JOIN Sales.SalesOrderHeader ON Sales.SalesOrderHeader.ShipToAddressID = Person.Address.AddressID
+WHERE Person.Person.PersonType = 'IN' AND Person.CountryRegion.Name = 'France'
+GROUP BY Person.Person.FirstName, Person.Person.LastName
+HAVING COUNT(Sales.SalesOrderHeader.SalesOrderID) > 
+(SELECT COUNT(*)
+FROM ((Sales.SalesOrderHeader JOIN Person.Address ON Sales.SalesOrderHeader.ShipToAddressID = Person.Address.AddressID)
+JOIN Person.StateProvince ON Person.Address.StateProvinceID = Person.StateProvince.StateProvinceID)
+JOIN Person.CountryRegion ON Person.StateProvince.CountryRegionCode = Person.CountryRegion.CountryRegionCode
+WHERE Person.CountryRegion.Name = 'France') 
+/ 
+(SELECT COUNT(*) 
+FROM ((((Person.BusinessEntity JOIN Person.Person ON Person.BusinessEntity.BusinessEntityID = Person.Person.BusinessEntityID)
+JOIN Person.BusinessEntityAddress ON Person.BusinessEntity.BusinessEntityID = Person.BusinessEntityAddress.BusinessEntityID)
+JOIN Person.Address ON Person.BusinessEntityAddress.AddressID = Person.Address.AddressID)
+JOIN Person.StateProvince ON Person.Address.StateProvinceID = Person.StateProvince.StateProvinceID)
+JOIN Person.CountryRegion ON Person.StateProvince.CountryRegionCode = Person.CountryRegion.CountryRegionCode
+WHERE Person.Person.PersonType = 'IN' AND Person.CountryRegion.Name = 'France');
+
+
+--lb mieszkancow Francji
+SELECT COUNT(*) 
+FROM ((((Person.BusinessEntity JOIN Person.Person ON Person.BusinessEntity.BusinessEntityID = Person.Person.BusinessEntityID)
+JOIN Person.BusinessEntityAddress ON Person.BusinessEntity.BusinessEntityID = Person.BusinessEntityAddress.BusinessEntityID)
+JOIN Person.Address ON Person.BusinessEntityAddress.AddressID = Person.Address.AddressID)
+JOIN Person.StateProvince ON Person.Address.StateProvinceID = Person.StateProvince.StateProvinceID)
+JOIN Person.CountryRegion ON Person.StateProvince.CountryRegionCode = Person.CountryRegion.CountryRegionCode
+WHERE Person.Person.PersonType = 'IN' AND Person.CountryRegion.Name = 'France';
+
+--liczba zamowien dla Francuzow
+SELECT COUNT(*)
+FROM ((Sales.SalesOrderHeader JOIN Person.Address ON Sales.SalesOrderHeader.ShipToAddressID = Person.Address.AddressID)
+JOIN Person.StateProvince ON Person.Address.StateProvinceID = Person.StateProvince.StateProvinceID)
+JOIN Person.CountryRegion ON Person.StateProvince.CountryRegionCode = Person.CountryRegion.CountryRegionCode
+WHERE Person.CountryRegion.Name = 'France';
