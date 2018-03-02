@@ -11,7 +11,7 @@ FROM Production.Product
 WHERE Color IS NULL;
 
 --zad3 ?
-SELECT YEAR(Sales.SalesOrderHeader.OrderDate) "YEAR", SUM(TotalDue) "PROFIT"
+SELECT YEAR(Sales.SalesOrderHeader.OrderDate) "YEAR", FORMAT(SUM(TotalDue), 'C') "PROFIT"
 FROM Sales.SalesOrderHeader
 WHERE Sales.SalesOrderHeader.Status = 5
 GROUP BY YEAR(Sales.SalesOrderHeader.OrderDate);
@@ -73,15 +73,15 @@ FROM ((Sales.SpecialOffer JOIN Sales.SpecialOfferProduct ON Sales.SpecialOffer.S
 GROUP BY Production.ProductSubcategory.Name;
 
 --zad8 ?
-SELECT Name
+SELECT Production.Product.Name
 FROM Production.Product
-WHERE ListPrice > (SELECT AVG(ListPrice) FROM Production.Product);
+WHERE Production.Product.ListPrice > (SELECT AVG(Production.Product.ListPrice) FROM Production.Product);
 
 --zad9
 SELECT MONTH(ShipDate) "SHIPMENT MONTH", SUM(OrderQty) "SUM OF PRODUCTS"
 FROM Sales.SalesOrderDetail JOIN Sales.SalesOrderHeader ON Sales.SalesOrderDetail.SalesOrderID = Sales.SalesOrderHeader.SalesOrderID
 GROUP BY MONTH(ShipDate)
-ORDER BY MONTH(ShipDate);
+ORDER BY 1;
 
 --zad10
 SELECT Person.CountryRegion.Name "COUNTRY", AVG(DATEDIFF(DAY, OrderDate, DueDate)) "AVERAGE DELIVERY TIME"
