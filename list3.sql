@@ -91,12 +91,12 @@ SUM([W miesiacu]) OVER (ORDER BY SalesOrderID ROWS BETWEEN 1 PRECEDING AND CURRE
 FROM Sales.SalesOrderHeader JOIN Person.Person ON Sales.SalesOrderHeader.SalesPersonID = Person.Person.BusinessEntityID 
 JOIN temp ON Sales.SalesOrderHeader.SalesOrderID = id;
 
---toooo
+
 WITH temp AS
 (
 	SELECT SalesOrderID AS [id], CONCAT(FirstName, LastName) AS [Imie i nazwisko], YEAR(OrderDate) AS [Rok], MONTH(OrderDate) AS [Miesiac],
 	COUNT(SalesOrderID) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate), MONTH(OrderDate) ORDER BY SalesOrderID RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS [W miesiacu],
-	COUNT(SalesOrderID) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate) ORDER BY SalesOrderID RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS [W roku],
+	COUNT(SalesOrderID) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate) ORDER BY MONTH(OrderDate) RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS [W roku],
 	COUNT(SalesOrderID) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate) ORDER BY SalesOrderID) AS [W roku narastajaco]
 	FROM Sales.SalesOrderHeader JOIN Person.Person ON Sales.SalesOrderHeader.SalesPersonID = Person.Person.BusinessEntityID
 )
@@ -105,6 +105,23 @@ SUM([W miesiacu]) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate) ORDER BY Sal
 FROM Sales.SalesOrderHeader JOIN Person.Person ON Sales.SalesOrderHeader.SalesPersonID = Person.Person.BusinessEntityID 
 JOIN temp ON Sales.SalesOrderHeader.SalesOrderID = id
 ORDER BY CONCAT(FirstName, LastName), YEAR(OrderDate), MONTH(OrderDate);
+
+WITH temp AS
+(
+	SELECT SalesOrderID AS [id], CONCAT(FirstName, LastName) AS [Imie i nazwisko], YEAR(OrderDate) AS [Rok], MONTH(OrderDate) AS [Miesiac],
+	COUNT(SalesOrderID) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate), MONTH(OrderDate) ORDER BY SalesOrderID RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS [W miesiacu],
+	COUNT(SalesOrderID) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate) ORDER BY SalesOrderID RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS [W roku]
+	FROM Sales.SalesOrderHeader JOIN Person.Person ON Sales.SalesOrderHeader.SalesPersonID = Person.Person.BusinessEntityID
+)
+SELECT temp.[Imie i nazwisko], temp.[Rok], temp.[Miesiac], 
+temp.[W miesiacu], 
+temp.[W roku], 
+SUM(temp.[W roku]) OVER(PARTITION BY SalesPersonID, YEAR(OrderDate) ORDER BY SalesOrderID) AS [W roku narastajaco],
+SUM(temp.[W miesiacu]) OVER (PARTITION BY SalesPersonID, YEAR(OrderDate) ORDER BY SalesOrderID ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS [Obecny i poprzedni miesiac]
+FROM Sales.SalesOrderHeader JOIN Person.Person ON Sales.SalesOrderHeader.SalesPersonID = Person.Person.BusinessEntityID 
+JOIN temp ON Sales.SalesOrderHeader.SalesOrderID = id
+ORDER BY CONCAT(FirstName, LastName), YEAR(OrderDate), MONTH(OrderDate);
+
 
 --zad6
 --z over
@@ -139,3 +156,41 @@ FROM
 	JOIN maxValues ON Production.ProductSubcategory.ProductSubcategoryID = id_maxV
 ) AS sub
 GROUP BY n;
+
+
+
+
+--zajecia
+WITH temp AS
+(
+	SELECT ProductSubcategory.Name, Sales.SalesOrderDetail.LineTotal
+	FROM Production.Product JOIN Production.ProductSubcategory ON Production.Product.ProductSubcategoryID = Production.ProductSubcategory.ProductSubcategoryID
+	JOIN Sales.SalesOrderDetail ON Production.Product.ProductID = Sales.SalesOrderDetail.ProductID
+	ORDER BY ProductSubcategory.Name
+)
+SELECT ProductSubcategory.Name, Product.Name
+FROM Production.Product JOIN Production.ProductSubcategory ON Production.Product.ProductSubcategoryID = Production.ProductSubcategory.ProductSubcategoryID
+JOIN Sales.SalesOrderDetail ON Production.Product.ProductID = Sales.SalesOrderDetail.ProductID
+
+
+
+
+SELECT subcName AS [Podkategoria], prodName AS [Produkt], cost AS [Kwota],
+SUM(cost) OVER(PARTITION BY subcName ORDER BY prodName) AS [Kwota narastajaco]
+FROM
+(
+	SELECT prodName, subcName, 
+	DENSE_RANK() OVER (PARTITION BY subcName ORDER BY cost) AS [rank],
+	cost
+	FROM 
+	(
+		SELECT Production.ProductSubcategory.Name AS [subcName], 
+		Production.Product.Name [prodName], 
+		SUM(LineTotal) AS [cost]
+		FROM Production.Product JOIN Production.ProductSubcategory ON Production.Product.ProductSubcategoryID = Production.ProductSubcategory.ProductSubcategoryID
+		JOIN Sales.SalesOrderDetail ON Production.Product.ProductID = Sales.SalesOrderDetail.ProductID
+		GROUP BY Production.ProductSubcategory.Name, Production.Product.Name
+	) AS temp1
+) AS temp2
+WHERE [rank] <= 2 
+ORDER BY 1,2;
