@@ -239,11 +239,14 @@ SELECT DISTINCT CONCAT(FirstName, ' ', LastName) "Name",
 	CASE 
 		WHEN COUNT(SalesOrderID) OVER(PARTITION BY Person.Person.BusinessEntityID) > 4 THEN 'Srebrna'
 		WHEN n.num > 2 THEN 'Zlota'
-		WHEN n11.num2011 > 2 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 1 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 3 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 4 AND n11.num2011 > 2 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
 	END AS c
 FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
 	JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
-	LEFT JOIN NumOfGoodBuys n ON Person.Person.BusinessEntityID = n.BusinessEntityID
+	JOIN NumOfGoodBuys n ON Person.Person.BusinessEntityID = n.BusinessEntityID
 	LEFT JOIN NumOfGoodBuys2011 n11 ON Person.Person.BusinessEntityID = n11.BusinessEntityID
 	LEFT JOIN NumOfGoodBuys2012 n12 ON Person.Person.BusinessEntityID = n12.BusinessEntityID
 	LEFT JOIN NumOfGoodBuys2013 n13 ON Person.Person.BusinessEntityID = n13.BusinessEntityID
