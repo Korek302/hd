@@ -52,6 +52,21 @@ WITH Test AS
 )
 SELECT * FROM Test WHERE ROWNUM < 6;
 
+SELECT nazwa,
+	[1],
+	[2],
+	[3],
+	[4],
+	[5]
+FROM (SELECT pracID, prodID AS id, ROWNUM, Nazwa_produktu AS nazwa FROM Test WHERE ROWNUM < 6) AS SourceTable
+	PIVOT (
+		COUNT(id) FOR ROWNUM IN([1],[2],[3],[4],[5])
+	) AS PivotTable;
+
+
+
+
+
 
 SELECT ProductID,
 	Name, 
@@ -100,8 +115,8 @@ FROM Sales.SalesOrderHeader
 GROUP BY YEAR(ShipDate), MONTH(ShipDate)
 ORDER BY YEAR(ShipDate), MONTH(ShipDate);
 
-SELECT 'CUST NUMBER', [2011], [2012], [2013], [2014]
-FROM (SELECT DISTINCT CustomerID, YEAR(ShipDate) AS year
+SELECT month, [2011], [2012], [2013], [2014]
+FROM (SELECT DISTINCT CustomerID, YEAR(ShipDate) AS year, MONTH(ShipDate) as month
 	FROM Sales.SalesOrderHeader) AS SourceTable
 	PIVOT (COUNT(CustomerID)
 		FOR year IN ([2011], [2012], [2013], [2014])
@@ -130,7 +145,10 @@ FROM
 		SELECT Sales.Customer.CustomerID AS id, Person.Person.FirstName AS firstName, Person.Person.LastName AS lastName, YEAR(OrderDate) AS yr
 		FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
 			JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
-		WHERE YEAR(OrderDate) NOT IN (2011, 2013)
+		WHERE Sales.Customer.CustomerID NOT IN (SELECT Sales.Customer.CustomerID AS yr
+		FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
+			JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
+			WHERE YEAR(OrderDate) IN (2011, 2013))
 	) AS SourceTable
 GROUP BY id, CONCAT(firstName, ' ', lastName);
 
@@ -235,14 +253,21 @@ NumOfGoodBuys AS
 )
 SELECT DISTINCT CONCAT(FirstName, ' ', LastName) "Name", 
 	COUNT(SalesOrderID) OVER(PARTITION BY Person.Person.BusinessEntityID) AS TRANSACTION_COUNT,
-	SUM(SubTotal) OVER(PARTITION BY Person.Person.BusinessEntityID) "COST",
+	FORMAT(SUM(SubTotal) OVER(PARTITION BY Person.Person.BusinessEntityID), 'C') "COST",
 	CASE 
-		WHEN COUNT(SalesOrderID) OVER(PARTITION BY Person.Person.BusinessEntityID) > 4 THEN 'Srebrna'
-		WHEN n.num > 2 THEN 'Zlota'
 		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 1 AND n14.num2014 > 2 THEN 'Platyna'
 		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
 		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 3 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
 		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 4 AND n11.num2011 > 2 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN n.num > 2 THEN 'Zlota'
+<<<<<<< HEAD
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 1 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 3 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+		WHEN COUNT(*) OVER(PARTITION BY YEAR(Sales.SalesOrderHeader.OrderDate)) = 4 AND n11.num2011 > 2 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+=======
+		WHEN COUNT(SalesOrderID) OVER(PARTITION BY Person.Person.BusinessEntityID) > 4 THEN 'Srebrna'
+>>>>>>> 44e436258326467d89b93ef66d24af8906e9886d
 	END AS c
 FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
 	JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
@@ -251,6 +276,7 @@ FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.Custom
 	LEFT JOIN NumOfGoodBuys2012 n12 ON Person.Person.BusinessEntityID = n12.BusinessEntityID
 	LEFT JOIN NumOfGoodBuys2013 n13 ON Person.Person.BusinessEntityID = n13.BusinessEntityID
 	LEFT JOIN NumOfGoodBuys2014 n14 ON Person.Person.BusinessEntityID = n14.BusinessEntityID
+ORDER BY c
 ;
 
 
@@ -266,3 +292,123 @@ WHERE SubTotal > (
 	AND
 	YEAR(OrderDate) = 2011 
 GROUP BY BusinessEntityID;
+
+
+WITH NumOfGoodBuys2011 AS
+(
+	SELECT BusinessEntityID, COUNT(*) num2011
+	FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
+		JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
+	WHERE SubTotal > (
+		SELECT 1.5 * AVG(SubTotal)
+		FROM Sales.SalesOrderHeader)
+		AND
+		YEAR(OrderDate) = 2011 
+	GROUP BY BusinessEntityID
+),
+NumOfGoodBuys2012 AS
+(
+	SELECT BusinessEntityID, COUNT(*) num2012
+	FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
+		JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
+	WHERE SubTotal > (
+		SELECT 1.5 * AVG(SubTotal)
+		FROM Sales.SalesOrderHeader)
+		AND
+		YEAR(OrderDate) = 2012 
+	GROUP BY BusinessEntityID
+),
+NumOfGoodBuys2013 AS
+(
+	SELECT BusinessEntityID, COUNT(*) num2013
+	FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
+		JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
+	WHERE SubTotal > (
+		SELECT 1.5 * AVG(SubTotal)
+		FROM Sales.SalesOrderHeader)
+		AND
+		YEAR(OrderDate) = 2013 
+	GROUP BY BusinessEntityID
+),
+NumOfGoodBuys2014 AS
+(
+	SELECT BusinessEntityID, COUNT(*) num2014
+	FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
+		JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
+	WHERE SubTotal > (
+		SELECT 1.5 * AVG(SubTotal)
+		FROM Sales.SalesOrderHeader)
+		AND
+		YEAR(OrderDate) = 2014 
+	GROUP BY BusinessEntityID
+),
+NumOfGoodBuys AS
+(
+	SELECT BusinessEntityID, COUNT(*) num
+	FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
+		JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
+	WHERE SubTotal > (
+		SELECT 1.5 * AVG(SubTotal)
+		FROM Sales.SalesOrderHeader)
+	GROUP BY BusinessEntityID
+)
+SELECT DISTINCT CONCAT(FirstName, ' ', LastName) "Name", 
+	COUNT(SalesOrderID) OVER(PARTITION BY Person.Person.BusinessEntityID) AS TRANSACTION_COUNT,
+	SUM(SubTotal) OVER(PARTITION BY Person.Person.BusinessEntityID) "COST",
+	CASE 
+		WHEN COUNT(SalesOrderID) OVER(PARTITION BY Person.Person.BusinessEntityID) > 4 THEN 'Srebrna'
+		WHEN n.num > 2 THEN 'Zlota'
+		WHEN n11.num2011 > 2 AND n12.num2012 > 2 AND n13.num2013 > 2 AND n14.num2014 > 2 THEN 'Platyna'
+	END AS card
+FROM Sales.SalesOrderHeader JOIN Sales.Customer ON Sales.SalesOrderHeader.CustomerID = Sales.Customer.CustomerID
+	JOIN Person.Person ON Sales.Customer.PersonID = Person.Person.BusinessEntityID
+	JOIN NumOfGoodBuys n ON Person.Person.BusinessEntityID = n.BusinessEntityID
+	LEFT JOIN NumOfGoodBuys2011 n11 ON Person.Person.BusinessEntityID = n11.BusinessEntityID
+	LEFT JOIN NumOfGoodBuys2012 n12 ON Person.Person.BusinessEntityID = n12.BusinessEntityID
+	LEFT JOIN NumOfGoodBuys2013 n13 ON Person.Person.BusinessEntityID = n13.BusinessEntityID
+	LEFT JOIN NumOfGoodBuys2014 n14 ON Person.Person.BusinessEntityID = n14.BusinessEntityID
+;
+
+
+
+
+
+
+--zajecia
+SELECT month1, [Helmets], [Bike Stands], [Bike Racks], [Cleaners]
+FROM(
+	SELECT MONTH(OrderDate) as month1, Production.ProductSubcategory.Name as name1, SubTotal
+	FROM Sales.SalesOrderHeader JOIN Sales.SalesOrderDetail ON Sales.SalesOrderHeader.SalesOrderID = Sales.SalesOrderDetail.SalesOrderID
+		JOIN Production.Product ON Sales.SalesOrderDetail.ProductID = Production.Product.ProductID
+		JOIN Production.ProductSubcategory ON Production.Product.ProductSubcategoryID = Production.ProductSubcategory.ProductSubcategoryID
+	) AS SourceTable
+	PIVOT (
+		SUM(SubTotal) FOR name1 IN ([Helmets], [Bike Stands], [Bike Racks], [Cleaners])
+	) AS PivotTable
+ORDER BY month1;
+
+SELECT month1, 
+	SUM(CASE WHEN name1 = 'Helmets' THEN SubTotal END) [Helmets],
+	SUM(CASE WHEN name1 = 'Bike Stands' THEN SubTotal END) [Bike Stands],
+	SUM(CASE WHEN name1 = 'Bike Racks' THEN SubTotal END) [Bike Racks],
+	SUM(CASE WHEN name1 = 'Cleaners' THEN SubTotal END) [Cleaners]
+FROM(
+	SELECT MONTH(OrderDate) as month1, Production.ProductSubcategory.Name as name1, SubTotal
+	FROM Sales.SalesOrderHeader JOIN Sales.SalesOrderDetail ON Sales.SalesOrderHeader.SalesOrderID = Sales.SalesOrderDetail.SalesOrderID
+		JOIN Production.Product ON Sales.SalesOrderDetail.ProductID = Production.Product.ProductID
+		JOIN Production.ProductSubcategory ON Production.Product.ProductSubcategoryID = Production.ProductSubcategory.ProductSubcategoryID
+	) AS SourceTable
+GROUP BY month1
+ORDER BY month1;
+
+
+
+
+
+
+FROM Sales.SalesOrderHeader JOIN Sales.SalesOrderDetail ON Sales.SalesOrderHeader.SalesOrderID = Sales.SalesOrderDetail.SalesOrderID
+	JOIN Production.Product ON Sales.SalesOrderDetail.ProductID = Production.Product.ProductID
+	JOIN Production.ProductSubcategory ON Production.Product.ProductSubcategoryID = Production.ProductSubcategory.ProductSubcategoryID
+
+PIVOT
+SUM(SubTotal)
