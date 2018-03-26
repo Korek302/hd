@@ -1,4 +1,4 @@
---zad1
+﻿--zad1
 CREATE SCHEMA [blady];
 
 --zad2
@@ -442,3 +442,76 @@ SELECT * FROM [blady].[DIM_CUSTOMER];
 SELECT * FROM [blady].[DIM_PRODUCT];
 SELECT * FROM [blady].[DIM_SALESPERSON];
 SELECT * FROM [blady].[FACT_SALES];
+
+--zad9
+CREATE TABLE [blady].[NAZWA_MIESIACA]
+(
+	[id] INT PRIMARY KEY,
+	[Name] NVARCHAR(11)
+);
+
+INSERT INTO [blady].[NAZWA_MIESIACA] VALUES
+(1, 'Styczeń'),(2, 'Luty'),(3, 'Marzec'),(4, 'Kwiecień'),
+(5, 'Maj'),(6, 'Czerwiec'),(7, 'Lipiec'),(8, 'Sierpień'),
+(9, 'Wrzesień'),(10, 'Październik'),(11, 'Listopad'),(12, 'Grudzień');
+
+CREATE TABLE [blady].[DZIEN_TYGODNIA]
+(
+	[id] INT PRIMARY KEY,
+	[Name] NVARCHAR(12)
+);
+
+DROP TABLE IF EXISTS [blady].[DZIEN_TYGODNIA];
+
+DROP TABLE IF EXISTS [blady].[NAZWA_MIESIACA];
+
+INSERT INTO [blady].[DZIEN_TYGODNIA] VALUES
+(1, 'Poniedziałek'),(2, 'Wtorek'),(3, 'Środa'),(4, 'Czwartek'),
+(5, 'Piątek'),(6, 'Sobota'),(7, 'Niedziela');
+
+--DROP DIM_TIME
+DROP TABLE IF EXISTS [blady].[DIM_TIME];
+
+--CREATE DIM_TIME
+CREATE TABLE [blady].[DIM_TIME]
+(
+	[PK_TIME] INT CONSTRAINT pk_dTime_time PRIMARY KEY,
+	[Rok] INT,
+	[Miesiac] NVARCHAR(11),
+	[DzienTygodnia] NVARCHAR(12),
+	[DzienMiesiaca] INT
+);
+DROP TABLE [blady].[DIM_TIME];
+
+--INSERT DIM_TIME
+INSERT INTO [blady].[DIM_TIME]
+SELECT DISTINCT ShipDate, LEFT(ShipDate, 4) AS [Rok], blady.NAZWA_MIESIACA.[Name] AS [NazwaMiesiaca], 
+blady.DZIEN_TYGODNIA.[Name] AS [DzienTygodnia], RIGHT(ShipDate, 2) AS [DzienMiesiaca]
+FROM blady.FACT_SALES JOIN blady.DZIEN_TYGODNIA ON DATEPART(weekday, CONVERT(char(8), ShipDate)) = blady.DZIEN_TYGODNIA.id
+JOIN blady.NAZWA_MIESIACA ON LEFT(RIGHT(ShipDate, 4), 2) = blady.NAZWA_MIESIACA.id;
+
+SELECT * FROM [blady].[DIM_TIME];
+
+SELECT ShipDate, LEFT(ShipDate, 4),LEFT(RIGHT(ShipDate, 4), 2), RIGHT(ShipDate, 2)  FROM [blady].[Fact_SALES];
+SELECT YEAR(CONCAT(CONCAT(CONCAT(CONCAT(LEFT(ShipDate,4) ,'/'), LEFT(RIGHT(ShipDate,4),2)) , '/'), RIGHT(ShipDate,2))) FROM [blady].[Fact_SALES];
+
+
+UPDATE blady.DIM_PRODUCT
+SET Color = 'Unknown'
+WHERE Color IS NULL;
+
+UPDATE blady.DIM_PRODUCT
+SET SubCategoryName = 'Unknown'
+WHERE SubCategoryName IS NULL;
+
+SELECT * FROM blady.DIM_PRODUCT;
+
+UPDATE blady.DIM_SALESPERSON
+SET CountryRegionCode = '000'
+WHERE CountryRegionCode IS NULL;
+
+UPDATE blady.DIM_SALESPERSON
+SET [Group] = 'Unknown'
+WHERE [Group] IS NULL;
+
+SELECT * FROM blady.DIM_SALESPERSON;
