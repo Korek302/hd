@@ -481,16 +481,14 @@ DROP TABLE [blady].[DIM_TIME];
 
 --INSERT DIM_TIME
 INSERT INTO [blady].[DIM_TIME]
-SELECT DISTINCT ShipDate, LEFT(ShipDate, 4) AS [Rok], blady.NAZWA_MIESIACA.[Name] AS [NazwaMiesiaca], 
-blady.DZIEN_TYGODNIA.[Name] AS [DzienTygodnia], RIGHT(ShipDate, 2) AS [DzienMiesiaca]
-FROM blady.FACT_SALES JOIN blady.DZIEN_TYGODNIA ON DATEPART(weekday, CONVERT(char(8), ShipDate)) = blady.DZIEN_TYGODNIA.id
-JOIN blady.NAZWA_MIESIACA ON LEFT(RIGHT(ShipDate, 4), 2) = blady.NAZWA_MIESIACA.id;
+SELECT DISTINCT OrderDate, LEFT(OrderDate, 4) AS [Rok], blady.NAZWA_MIESIACA.[Name] AS [NazwaMiesiaca], 
+blady.DZIEN_TYGODNIA.[Name] AS [DzienTygodnia], RIGHT(OrderDate, 2) AS [DzienMiesiaca]
+FROM blady.FACT_SALES JOIN blady.DZIEN_TYGODNIA ON DATEPART(weekday, CONVERT(char(8), OrderDate)) = blady.DZIEN_TYGODNIA.id
+JOIN blady.NAZWA_MIESIACA ON LEFT(RIGHT(OrderDate, 4), 2) = blady.NAZWA_MIESIACA.id;
 
-SELECT * FROM [blady].[DIM_TIME];
-
-SELECT ShipDate, LEFT(ShipDate, 4),LEFT(RIGHT(ShipDate, 4), 2), RIGHT(ShipDate, 2)  FROM [blady].[Fact_SALES];
-SELECT YEAR(CONCAT(CONCAT(CONCAT(CONCAT(LEFT(ShipDate,4) ,'/'), LEFT(RIGHT(ShipDate,4),2)) , '/'), RIGHT(ShipDate,2))) FROM [blady].[Fact_SALES];
-
+ALTER TABLE blady.FACT_SALES
+ADD CONSTRAINT fk_dFactSales_oDate
+FOREIGN KEY ([OrderDate]) REFERENCES blady.DIM_TIME([PK_TIME]);
 
 UPDATE blady.DIM_PRODUCT
 SET Color = 'Unknown'
@@ -509,6 +507,13 @@ WHERE CountryRegionCode IS NULL;
 UPDATE blady.DIM_SALESPERSON
 SET [Group] = 'Unknown'
 WHERE [Group] IS NULL;
+
+
+SELECT * FROM [blady].[DIM_TIME];
+
+SELECT ShipDate, LEFT(ShipDate, 4),LEFT(RIGHT(ShipDate, 4), 2), RIGHT(ShipDate, 2)  FROM [blady].[Fact_SALES];
+SELECT YEAR(CONCAT(CONCAT(CONCAT(CONCAT(LEFT(ShipDate,4) ,'/'), LEFT(RIGHT(ShipDate,4),2)) , '/'), RIGHT(ShipDate,2))) FROM [blady].[Fact_SALES];
+
 
 SELECT * FROM [blady].[DIM_TIME];
 SELECT * FROM [blady].[DIM_CUSTOMER];

@@ -1,0 +1,194 @@
+--zad3
+SELECT 
+{[Measures].[Customer ID Distinct Count]} on columns, 
+{[DIM CUSTOMER].[Country Region Code].[Country Region Code]} on rows 
+from [Adventure Works2014Cube];
+
+--zad4
+SELECT 
+{[DIM TIME].[Rok].&[2012], [DIM TIME].[Rok].&[2013]} on columns, 
+{[DIM CUSTOMER].[Country Region Code].[Country Region Code]} on rows 
+from [Adventure Works2014Cube]
+where [Measures].[Customer ID Distinct Count];
+
+--zad5
+SELECT crossjoin
+( 
+	{[DIM TIME].[Rok].&[2012], [DIM TIME].[Rok].&[2013]},
+	{[Measures].[Customer ID Distinct Count], [Measures].[Order Qty]} 
+)
+on columns, 
+{[DIM CUSTOMER].[Country Region Code].[Country Region Code]} on rows 
+from [Adventure Works2014Cube];
+
+--zad6
+select non empty crossjoin
+(
+	{[DIM PRODUCT].[Category Name].children},
+	{[DIM PRODUCT].[Sub Category Name].children},
+	{[DIM PRODUCT].[Name].children}
+)
+on columns, 
+{[DIM CUSTOMER].[Country Region Code].[Country Region Code]} on rows 
+from [Adventure Works2014Cube]
+where [Measures].[Order Qty];
+
+--zad7
+select non empty 
+crossjoin
+(
+	{[DIM PRODUCT].[Category Name].children},
+	order
+	(
+		filter
+		(
+			{[DIM PRODUCT].[Sub Category Name].children}, [Measures].[Product ID Distinct Count] > 10
+		), 
+		[Measures].[Order Qty], desc
+	),
+	{[DIM PRODUCT].[Name].children}
+)
+on columns, {[DIM CUSTOMER].[Country Region Code].[Country Region Code]}
+on rows from [Adventure Works2014Cube]
+where [Measures].[Order Qty];
+
+
+select non empty 
+order
+(
+	crossjoin
+	(
+		{[DIM PRODUCT].[Category Name].children},
+		filter
+		(
+			{[DIM PRODUCT].[Sub Category Name].children}, [Measures].[Product ID Distinct Count] > 10
+		),
+		{[DIM PRODUCT].[Name].children}
+	), 
+	[Measures].[Order Qty], desc
+)
+on columns, {[DIM CUSTOMER].[Country Region Code].[Country Region Code]}
+on rows from [Adventure Works2014Cube]
+where [Measures].[Order Qty];
+
+
+
+--zad8
+with member Measures.[AvgCost] as
+	'Avg(
+		{[DIM TIME].[Miesiac].[Miesiac]}, 
+		[Measures].[Line Total]
+	)'
+select
+{[Measures].[Line Total], Measures.[AvgCost]} on columns,
+crossjoin
+(
+	LastPeriods(2,[DIM TIME].[Rok].&[2013]), 
+	{[DIM TIME].[Miesiac].[Miesiac]}
+) on rows
+from [Adventure Works2014Cube];
+
+with member Measures.[Sales To Date] as
+Avg
+({LastPeriods(2, [DIM TIME].[Rok].&[2013])}, Measures.[Line Total])
+select
+	{[Measures].[Line Total], [Measures].[Sales To Date]} on columns,
+	crossjoin(LastPeriods(2,[DIM TIME].[Rok].&[2013]), {[DIM TIME].[Miesiac].children}) on rows
+from [Adventure Works2014Cube];
+
+
+
+with member Measures.[AvgCost] as
+	Avg
+	(
+		{[DIM TIME].[Rok].&[2013], 
+		[DIM TIME].[Miesiac].[Miesiac]},
+		[Measures].[Line Total]
+	)
+select
+{[Measures].[Line Total], Measures.[AvgCost]} on columns,
+crossjoin
+(
+	LastPeriods(2,[DIM TIME].[Rok].&[2013]), 
+	{[DIM TIME].[Miesiac].[Miesiac]}
+) on rows
+from [Adventure Works2014Cube];
+
+
+
+
+with member Measures.[AvgCost] as
+Avg
+(
+	descendants
+	(
+		[DIM TIME].[Rok].currentmember,
+		[DIM TIME].[Miesiac].currentmember
+	), 
+	[Measures].[Line Total]
+)
+select
+{[Measures].[Line Total], Measures.[AvgCost]} on columns,
+crossjoin
+(
+	LastPeriods(2 ,[DIM TIME].[Rok].&[2013]), 
+	{[DIM TIME].[Miesiac].[Miesiac]}
+) on rows
+from [Adventure Works2014Cube];
+
+
+
+
+--zad9
+with member [Measures].[NazwaMiesiaca]
+as '[DIM TIME].[Miesiac].CurrentMember.Name'
+select 
+{
+	head
+	(
+		order
+		(
+			crossjoin
+			(
+					descendants
+					(
+						[DIM TIME].[Rok].&[2013],
+						[DIM TIME].[Miesiac], 
+						SELF
+					),
+					descendants
+					(
+						[DIM TIME].[Miesiac],
+						[DIM TIME].[Dzien Miesiaca],
+						SELF
+					),
+					[DIM TIME].[Dzien Miesiaca].[Dzien Miesiaca]
+			), [Measures].[Order Qty], desc
+		), 1
+	)
+} on columns,
+{[Measures].[Order Qty]} on rows
+from [Adventure Works2014Cube];
+
+
+
+with member [Measures].[NazwaMiesiaca]
+as '[DIM TIME].[Miesiac].CurrentMember.Name'
+select 
+{
+	head
+	(
+		order
+		(
+			crossjoin
+			(
+				{[DIM TIME].[Miesiac].Children},
+				{[DIM TIME].[Dzien Miesiaca].Children}
+			),
+			[Measures].[Order Qty], desc
+		), 1
+	)
+} on columns,
+{[Measures].[Order Qty]} on rows
+from [Adventure Works2014Cube]
+where [DIM TIME].[Rok].&[2013];
