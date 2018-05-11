@@ -51,6 +51,8 @@ CREATE TABLE AtpMatches
 	 l_bpFaced INT
 );
 
+select * from dbo.atp_matches order by tourney_id;
+
 BULK INSERT [dbo].[AtpMatches]
 FROM 'D:\Documents\atp-matches-dataset\atp_matches_2000.csv'
 WITH
@@ -64,15 +66,25 @@ WITH
 
 SELECT COUNT(*) FROM dbo.atp_matches_2000;
 
-DROP TABLE IF EXISTS blady.FACT_MATCHES;
-DROP TABLE IF EXISTS blady.DIM_PLAYER;
-DROP TABLE IF EXISTS blady.DIM_TOURNEY;
-DROP TABLE IF EXISTS blady.DIM_SCORE;
-DROP TABLE IF EXISTS blady.DIM_STATS;
-DROP TABLE IF EXISTS blady.DIM_TIME;
 
-CREATE SCHEMA [blady];
+DROP FUNCTION IF EXISTS dbo.NTH_ELEMENT
+GO
+DROP TABLE IF EXISTS blady.FACT_MATCHES
+GO
+DROP TABLE IF EXISTS blady.DIM_PLAYER
+GO
+DROP TABLE IF EXISTS blady.DIM_TOURNEY
+GO
+DROP TABLE IF EXISTS blady.DIM_SCORE
+GO
+DROP TABLE IF EXISTS blady.DIM_STATS
+GO
+DROP TABLE IF EXISTS blady.DIM_TIME
+GO
+DROP SCHEMA IF EXISTS [blady]
 
+CREATE SCHEMA [blady]
+GO
 CREATE TABLE [blady].FACT_MATCHES 
 (
 	[Date] int NOT NULL, 
@@ -85,7 +97,8 @@ CREATE TABLE [blady].FACT_MATCHES
 	[Round] varchar(4) NULL, 
 	[Duration] int NULL, 
 	[BestOf] int NULL
-);
+)
+GO
 CREATE TABLE [blady].DIM_PLAYER 
 (
 	[PlayerID] int IDENTITY NOT NULL, 
@@ -95,15 +108,18 @@ CREATE TABLE [blady].DIM_PLAYER
 	[Age] int NULL, 
 	[Rank] int NULL, 
 	[Nationality] varchar(100) NULL
-);
-DBCC CHECKIDENT ('[blady].DIM_PLAYER', RESEED, 0);
+)
+GO
+DBCC CHECKIDENT ('[blady].DIM_PLAYER', RESEED, 0)
+GO
 CREATE TABLE [blady].DIM_TIME 
 (
 	[PK_TIME] int NOT NULL, 
 	[Year] int NOT NULL, 
 	[Month] int NOT NULL, 
 	[Day] int NOT NULL
-);
+)
+GO
 CREATE TABLE [blady].DIM_TOURNEY 
 (
 	[TourneyID] int IDENTITY NOT NULL, 
@@ -111,8 +127,10 @@ CREATE TABLE [blady].DIM_TOURNEY
 	[TourneyLevel] char(1) NULL, 
 	[DrawSize] int NULL, 
 	[Surface] varchar(10) NULL
-);
-DBCC CHECKIDENT ('[blady].DIM_TOURNEY', RESEED, 0);
+)
+GO
+DBCC CHECKIDENT ('[blady].DIM_TOURNEY', RESEED, 0)
+GO
 CREATE TABLE [blady].DIM_STATS 
 (
 	[StatsID] int IDENTITY NOT NULL, 
@@ -121,8 +139,10 @@ CREATE TABLE [blady].DIM_STATS
 	[BreakpointsFaced] int NULL, 
 	[FirstServeWon] int NULL, 
 	[DoubleFaults] int NULL
-);
-DBCC CHECKIDENT ('[blady].DIM_STATS', RESEED, 0);
+)
+GO
+DBCC CHECKIDENT ('[blady].DIM_STATS', RESEED, 0)
+GO
 CREATE TABLE [blady].DIM_SCORE 
 (
 	[ScoreID] int IDENTITY NOT NULL, 
@@ -131,8 +151,9 @@ CREATE TABLE [blady].DIM_SCORE
 	[Set3] varchar(10) NULL, 
 	[Set4] varchar(10) NULL, 
 	[Set5] varchar(10) NULL
-);
-DBCC CHECKIDENT ('[blady].DIM_SCORE', RESEED, 0);
+)
+GO
+DBCC CHECKIDENT ('[blady].DIM_SCORE', RESEED, 0)
 
 INSERT INTO [blady].[DIM_PLAYER]
 SELECT [name], max(hand) as hand, max(ht) as ht, max(age) as age, max([rank]) as rank, max(ioc) as ioc FROM
@@ -145,20 +166,15 @@ SELECT [name], max(hand) as hand, max(ht) as ht, max(age) as age, max([rank]) as
 	FROM dbo.atp_matches
 	group by loser_name
 ) as t([name], hand, ht, age, [rank], ioc)
-GROUP BY [name];
-
-select * from blady.DIM_PLAYER ORDER BY PlayerID;
-
-
+GROUP BY [name]
 GO
 CREATE FUNCTION dbo.NTH_ELEMENT (@Input NVARCHAR(MAX), @Delim CHAR = '-', @N INT = 0)
 RETURNS NVARCHAR(MAX)
 AS
-BEGIN
-RETURN (SELECT VALUE FROM STRING_SPLIT(@Input, @Delim) ORDER BY (SELECT NULL) OFFSET @N ROWS FETCH NEXT 1 ROW ONLY)
+	BEGIN
+	RETURN (SELECT VALUE FROM STRING_SPLIT(@Input, @Delim) ORDER BY (SELECT NULL) OFFSET @N ROWS FETCH NEXT 1 ROW ONLY)
 END
 GO
-
 INSERT INTO [blady].[DIM_SCORE]
 select distinct
 dbo.NTH_ELEMENT(score, ' ', 0),
@@ -166,117 +182,8 @@ dbo.NTH_ELEMENT(score, ' ', 1),
 dbo.NTH_ELEMENT(score, ' ', 2),
 dbo.NTH_ELEMENT(score, ' ', 3),
 dbo.NTH_ELEMENT(score, ' ', 4)
-from dbo.atp_matches;
-
-
-SELECT 
-	LEFT(score, 3), 
-	CASE
-		WHEN SUBSTRING(score, 4, 1) ='(' THEN SUBSTRING(score, 8, 3)
-		ELSE SUBSTRING(score, 5, 3)
-	END, 
-	CASE
-		WHEN SUBSTRING(score, 4, 1) ='(' THEN
-			CASE 
-				WHEN SUBSTRING(score, 11, 1) ='(' THEN SUBSTRING(score, 15, 3)
-				ELSE SUBSTRING(score, 12, 3)
-			END
-		ELSE 
-			CASE 
-				WHEN SUBSTRING(score, 8, 1) ='(' THEN SUBSTRING(score, 12, 3)
-				ELSE SUBSTRING(score, 9, 3)
-			END
-	END,
-	CASE
-		WHEN SUBSTRING(score, 4, 1) ='(' THEN
-			CASE 
-				WHEN SUBSTRING(score, 11, 1) ='(' THEN 
-					CASE
-						WHEN SUBSTRING(score, 18, 1) ='(' THEN SUBSTRING(score, 22, 3)
-						ELSE SUBSTRING(score, 19, 3)
-					END
-				ELSE 
-					CASE
-						WHEN SUBSTRING(score, 15, 1) ='(' THEN SUBSTRING(score, 19, 3)
-						ELSE SUBSTRING(score, 16, 3)
-					END
-			END
-		ELSE 
-			CASE 
-				WHEN SUBSTRING(score, 8, 1) ='(' THEN 
-					CASE
-						WHEN SUBSTRING(score, 15, 1) ='(' THEN SUBSTRING(score, 19, 3)
-						ELSE SUBSTRING(score, 16, 3)
-					END
-				ELSE 
-					CASE
-						WHEN SUBSTRING(score, 12, 1) ='(' THEN SUBSTRING(score, 16, 3)
-						ELSE SUBSTRING(score, 13, 3)
-					END
-			END
-	END,
-	CASE
-		WHEN SUBSTRING(score, 4, 1) ='(' THEN
-			CASE 
-				WHEN SUBSTRING(score, 11, 1) ='(' THEN 
-					CASE
-						WHEN SUBSTRING(score, 18, 1) ='(' THEN 
-							CASE
-								WHEN SUBSTRING(score, 25, 1) ='(' THEN SUBSTRING(score, 29, 6)
-								ELSE SUBSTRING(score, 26, 6)
-							END
-						ELSE 
-							CASE 
-								WHEN SUBSTRING(score, 22, 1) ='(' THEN SUBSTRING(score, 26, 6)
-								ELSE SUBSTRING(score, 23, 6)
-							END
-					END
-				ELSE 
-					CASE
-						WHEN SUBSTRING(score, 15, 1) ='(' THEN 
-							CASE
-								WHEN SUBSTRING(score, 22, 1) ='(' THEN SUBSTRING(score, 26, 6)
-								ELSE SUBSTRING(score, 23, 6)
-							END
-						ELSE 
-							CASE
-								WHEN SUBSTRING(score, 19, 1) ='(' THEN SUBSTRING(score, 23, 6)
-								ELSE SUBSTRING(score, 20, 6)
-							END
-					END
-			END
-		ELSE 
-			CASE 
-				WHEN SUBSTRING(score, 8, 1) ='(' THEN 
-					CASE
-						WHEN SUBSTRING(score, 15, 1) ='(' THEN 
-							CASE
-								WHEN SUBSTRING(score, 22, 1) ='(' THEN SUBSTRING(score, 26, 6)
-								ELSE SUBSTRING(score, 23, 6)
-							END
-						ELSE 
-							CASE
-								WHEN SUBSTRING(score, 19, 1) ='(' THEN SUBSTRING(score, 23, 6)
-								ELSE SUBSTRING(score, 20, 6)
-							END
-					END
-				ELSE 
-					CASE
-						WHEN SUBSTRING(score, 12, 1) ='(' THEN 
-							CASE
-								WHEN SUBSTRING(score, 19, 1) ='(' THEN SUBSTRING(score, 23, 6)
-								ELSE SUBSTRING(score, 20, 6)
-							END
-						ELSE 
-							CASE
-								WHEN SUBSTRING(score, 16, 1) ='(' THEN SUBSTRING(score, 20, 6)
-								ELSE SUBSTRING(score, 17, 6)
-							END
-					END
-			END
-	END
-FROM dbo.atp_matches;
-
+from dbo.atp_matches
+GO
 INSERT INTO [blady].[DIM_STATS]
 SELECT DISTINCT * FROM
 (
@@ -314,6 +221,12 @@ SELECT DISTINCT * FROM
 		END, 
 		CASE 
 			WHEN l_bpFaced = '' THEN 0
+			WHEN l_bpFaced LIKE '%,%' THEN 
+				CASE
+					WHEN SUBSTRING(l_bpFaced, 0, 1) != ',' THEN 0
+					WHEN SUBSTRING(l_bpFaced, 2, 1) != ',' THEN SUBSTRING(l_bpFaced, 1, 2)
+					ELSE SUBSTRING(l_bpFaced, 1, 1)
+				END
 			ELSE l_bpFaced
 		END, 
 		CASE 
@@ -325,16 +238,16 @@ SELECT DISTINCT * FROM
 			ELSE l_df
 		END
 	FROM dbo.atp_matches
-) as t(a, b, c, d, e);
-
+) as t(a, b, c, d, e)
+GO
 INSERT INTO [blady].[DIM_TIME]
 SELECT DISTINCT tourney_date, SUBSTRING(tourney_date, 1, 4), SUBSTRING(tourney_date, 5, 2), SUBSTRING(tourney_date, 7, 2)
-FROM dbo.atp_matches;
-
+FROM dbo.atp_matches
+GO
 INSERT INTO [blady].[DIM_TOURNEY]
 SELECT DISTINCT tourney_name, tourney_level, draw_size, surface
-FROM dbo.atp_matches;
-
+FROM dbo.atp_matches
+GO
 INSERT INTO [blady].[FACT_MATCHES]
 SELECT tourney_date, w.PlayerID, l.PlayerID, TourneyID, ws.StatsID, ls.StatsID, ScoreID, [round], [minutes], best_of
 FROM dbo.atp_matches 
@@ -356,30 +269,49 @@ FROM dbo.atp_matches
 		AND ws.DoubleFaults = CASE WHEN w_df = '' THEN 0 ELSE w_df END
 	LEFT JOIN blady.DIM_STATS ls ON ls.Aces = CASE WHEN l_ace = '' THEN 0 ELSE l_ace END
 		AND ls.BreakpointsWon = CASE WHEN l_bpSaved = '' THEN 0 ELSE l_bpSaved END
-		AND ls.BreakpointsFaced = CASE WHEN l_bpFaced = '' THEN 0 ELSE l_bpFaced END
+		AND ls.BreakpointsFaced = 
+			CASE 
+				WHEN l_bpFaced = '' THEN 0 
+				WHEN l_bpFaced LIKE '%,%' THEN 
+					CASE
+						WHEN SUBSTRING(l_bpFaced, 0, 1) != ',' THEN 0
+						WHEN SUBSTRING(l_bpFaced, 2, 1) != ',' THEN SUBSTRING(l_bpFaced, 1, 2)
+						ELSE SUBSTRING(l_bpFaced, 1, 1)
+					END
+				ELSE l_bpFaced 
+			END
 		AND ls.FirstServeWon = CASE WHEN l_1stWon = '' THEN 0 ELSE l_1stWon END
 		AND ls.DoubleFaults = CASE WHEN l_df = '' THEN 0 ELSE l_df END
-;
 
-select * FROM blady.DIM_PLAYER;
-select * from blady.DIM_TOURNEY;
-select * from blady.DIM_SCORE order by ScoreID;
+
+ALTER TABLE blady.DIM_SCORE ADD CONSTRAINT pk_score_id PRIMARY KEY (ScoreID)
+GO
+ALTER TABLE blady.DIM_TOURNEY ADD CONSTRAINT pk_tourney_id PRIMARY KEY (TourneyID)
+GO
+ALTER TABLE blady.DIM_PLAYER ADD CONSTRAINT pk_player_id PRIMARY KEY (PlayerID)
+GO
+ALTER TABLE blady.DIM_STATS ADD CONSTRAINT pk_stats_id PRIMARY KEY (StatsID)
+GO
+ALTER TABLE blady.DIM_TIME ADD CONSTRAINT pk_time_id PRIMARY KEY (PK_TIME)
+GO
+ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_scoreID FOREIGN KEY (ScoreID) REFERENCES blady.DIM_SCORE (ScoreID)
+GO
+ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_winnerID FOREIGN KEY (WinnerID) REFERENCES blady.DIM_PLAYER (PlayerID)
+GO
+ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_loserID FOREIGN KEY (LoserID) REFERENCES blady.DIM_PLAYER (PlayerID)
+GO
+ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_wStatsID FOREIGN KEY (WinnerStatsID) REFERENCES blady.DIM_STATS (StatsID)
+GO
+ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_lStatsID FOREIGN KEY (LoserStatsID) REFERENCES blady.DIM_STATS (StatsID)
+GO
+ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_time FOREIGN KEY ([Date]) REFERENCES blady.DIM_TIME (PK_TIME)
+GO
+ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_tourneyID FOREIGN KEY (TourneyID) REFERENCES blady.DIM_TOURNEY (TourneyID)
+
+
+select * from blady.DIM_PLAYER;
+select * from blady.DIM_SCORE;
 select * from blady.DIM_STATS;
-
-select * from blady.DIM_PLAYER a
-where PlayerName IN (select PlayerName from blady.DIM_PLAYER b where b.PlayerID != a.PlayerID);
-
-select * from dbo.atp_matches;
-
-ALTER TABLE blady.DIM_SCORE ADD CONSTRAINT pk_score_id PRIMARY KEY (ScoreID);
-ALTER TABLE blady.DIM_TOURNEY ADD CONSTRAINT pk_tourney_id PRIMARY KEY (TourneyID);
-ALTER TABLE blady.DIM_PLAYER ADD CONSTRAINT pk_player_id PRIMARY KEY (PlayerID);
-ALTER TABLE blady.DIM_STATS ADD CONSTRAINT pk_stats_id PRIMARY KEY (StatsID);
-ALTER TABLE blady.DIM_TIME ADD CONSTRAINT pk_time_id PRIMARY KEY (PK_TIME);
-ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_scoreID FOREIGN KEY (ScoreID) REFERENCES blady.DIM_SCORE (ScoreID);
-ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_winnerID FOREIGN KEY (WinnerID) REFERENCES blady.DIM_PLAYER (PlayerID);
-ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_loserID FOREIGN KEY (LoserID) REFERENCES blady.DIM_PLAYER (PlayerID);
-ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_wStatsID FOREIGN KEY (WinnerStatsID) REFERENCES blady.DIM_STATS (StatsID);
-ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_lStatsID FOREIGN KEY (LoserStatsID) REFERENCES blady.DIM_STATS (StatsID);
-ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_time FOREIGN KEY ([Date]) REFERENCES blady.DIM_TIME (PK_TIME);
-ALTER TABLE blady.FACT_MATCHES ADD CONSTRAINT fk_fm_tourneyID FOREIGN KEY (TourneyID) REFERENCES blady.DIM_TOURNEY (TourneyID);
+select * from blady.DIM_TIME;
+select * from blady.DIM_TOURNEY;
+select * from blady.FACT_MATCHES;
